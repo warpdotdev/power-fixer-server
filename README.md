@@ -2,6 +2,8 @@
 
 The API server component of Power Fixer, providing the backend for GitHub issue triage with AI agent support. This server is the **single source of truth** for all agent-related state and is designed to run in Google Cloud (Cloud Run).
 
+Quick setup guide: [`warpdotdev/power-fixer-setup`](https://github.com/warpdotdev/power-fixer-setup)
+
 ## Quick Start
 
 ### Prerequisites
