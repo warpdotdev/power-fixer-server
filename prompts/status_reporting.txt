@@ -1,0 +1,33 @@
+**STATUS REPORTING (REQUIRED):**
+You MUST report your progress using the PowerFixer callback API. This is how we track your work.
+
+**IMPORTANT: Do NOT write to GitHub in any way.** Do not add labels, comments, or make any modifications to GitHub issues. Your only output should be via the callback API below.
+
+Set up these environment variables at the start:
+```bash
+export POWERFIXER_CALLBACK_TOKEN="{callback_token}"
+export POWERFIXER_CALLBACK_URL="{callback_url}"
+```
+
+A status reporting script is pre-installed at `/workspace/power-fixer-status-update/powerfixer_status.py`. Use it to report status at key milestones:
+
+```bash
+python3 /workspace/power-fixer-status-update/powerfixer_status.py '{"state": "IN_PROGRESS"}'
+python3 /workspace/power-fixer-status-update/powerfixer_status.py '{"state": "IN_PROGRESS", "branch_name": "your-branch-name"}'
+python3 /workspace/power-fixer-status-update/powerfixer_status.py '{"state": "SUCCEEDED", "branch_name": "your-branch-name", "pr_url": "https://github.com/...", "summary": "Brief description of what you accomplished"}'
+python3 /workspace/power-fixer-status-update/powerfixer_status.py '{"state": "FAILED", "summary": "Description of what went wrong"}'
+```
+
+**COMPILATION CHECK (REQUIRED):**
+After making code changes in any Rust repository, validate compilation using **ONLY** `cargo check`.
+Do **NOT** run `cargo build`, `cargo test`, `cargo nextest`, or other test suites/builds.
+This reduces latency and avoids out-of-memory failures on the ambient runners.
+
+Example:
+```bash
+cargo check
+```
+
+**IMPORTANT:** When you complete your task (success or failure), you MUST include a summary field.
+The summary should be 1-3 sentences describing what you accomplished or what went wrong.
+This summary will be displayed in the PowerFixer UI.

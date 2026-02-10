@@ -1,0 +1,40 @@
+steps:
+  # Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:$COMMIT_SHA'
+      - '-t'
+      - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:latest'
+      - '.'
+
+  # Push the image with commit SHA tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:$COMMIT_SHA'
+
+  # Push the latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:latest'
+
+  # Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud'
+      - 'run'
+      - 'deploy'
+      - 'power-fixer-server'
+      - '--image=us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:$COMMIT_SHA'
+      - '--region=us-east4'
+      - '--quiet'
+
+images:
+  - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:$COMMIT_SHA'
+  - 'us-east4-docker.pkg.dev/$PROJECT_ID/power-fixer/server:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY

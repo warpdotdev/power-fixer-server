@@ -1,0 +1,52 @@
+name: Deploy to Cloud Run
+
+on:
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: your-project-id
+  REGION: us-central1
+  SERVICE_NAME: power-fixer-server
+  REPOSITORY: power-fixer
+  IMAGE_NAME: server
+  AR_HOST: us-central1-docker.pkg.dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker ${{ env.AR_HOST }} --quiet
+
+      - name: Build and push Docker image
+        env:
+          IMAGE_URI: ${{ env.AR_HOST }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}
+        run: |
+          docker build -t "$IMAGE_URI:${GITHUB_SHA}" -t "$IMAGE_URI:latest" .
+          docker push "$IMAGE_URI:${GITHUB_SHA}"
+          docker push "$IMAGE_URI:latest"
+
+      - name: Deploy to Cloud Run
+        env:
+          IMAGE_URI: ${{ env.AR_HOST }}/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE_NAME }}
+        run: |
+          gcloud run deploy "${{ env.SERVICE_NAME }}" \
+            --image "$IMAGE_URI:${GITHUB_SHA}" \
+            --region "${{ env.REGION }}" \
+            --project "${{ env.PROJECT_ID }}"
