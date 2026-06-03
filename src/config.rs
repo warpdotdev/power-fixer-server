@@ -14,8 +14,22 @@ pub fn default_callback_url() -> String {
     env::var("POWERFIXER_CALLBACK_URL").unwrap_or_else(|_| "http://localhost:3001".to_string())
 }
 
+/// Default Warp API base URL used when `WARP_API_BASE_URL` is unset.
+///
+/// `WARP_API_BASE_URL` is honored verbatim (scheme, host, port, and path), so it
+/// may point at an internal Private Service Connect endpoint such as
+/// `http://10.1.2.3/api/v1` over plain HTTP, with no TLS or host-derivation
+/// assumptions.
+pub const DEFAULT_WARP_API_BASE_URL: &str = "https://warp.dev/api/v1";
+
 pub fn warp_api_base_url() -> String {
-    env::var("WARP_API_BASE_URL").unwrap_or_else(|_| "https://warp.dev/api/v1".to_string())
+    resolve_warp_api_base_url(env::var("WARP_API_BASE_URL").ok())
+}
+
+/// Resolves the Warp API base URL from an optional raw env value, falling back to
+/// [`DEFAULT_WARP_API_BASE_URL`] when the variable is unset.
+fn resolve_warp_api_base_url(raw: Option<String>) -> String {
+    raw.unwrap_or_else(|| DEFAULT_WARP_API_BASE_URL.to_string())
 }
 
 pub fn warp_api_key() -> Option<String> {
@@ -73,4 +87,27 @@ pub fn team_scoped_launch() -> bool {
         env::var("POWERFIXER_TEAM_SCOPED").as_deref(),
         Ok("1") | Ok("true") | Ok("TRUE") | Ok("yes") | Ok("YES")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn warp_api_base_url_falls_back_to_default_when_unset() {
+        assert_eq!(resolve_warp_api_base_url(None), DEFAULT_WARP_API_BASE_URL);
+    }
+
+    #[test]
+    fn warp_api_base_url_honors_public_override() {
+        let public = "https://staging.warp.dev/api/v1".to_string();
+        assert_eq!(resolve_warp_api_base_url(Some(public.clone())), public);
+    }
+
+    #[test]
+    fn warp_api_base_url_honors_internal_psc_http_endpoint() {
+        // Internal PSC endpoints use a raw IP over plain HTTP with no TLS.
+        let internal = "http://10.1.2.3/api/v1".to_string();
+        assert_eq!(resolve_warp_api_base_url(Some(internal.clone())), internal);
+    }
 }

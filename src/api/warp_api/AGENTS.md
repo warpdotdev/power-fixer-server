@@ -66,6 +66,16 @@ let task = warp_client.get_task(&task_id).await?;
 ## Environment Variables
 
 - `WARP_API_KEY` - API key for authentication
-- `WARP_API_BASE_URL` - Override base URL (default: `https://warp.dev/api/v1`)
+- `WARP_API_BASE_URL` - Override base URL (default: `https://warp.dev/api/v1`). Honored
+  verbatim, so it may point at an internal Private Service Connect endpoint such as
+  `http://<internal-ip>/api/v1` (plain HTTP, no TLS assumptions).
 - `POWERFIXER_GCP_PROJECT` - GCP project for Secret Manager fallback
 - `POWERFIXER_WARP_API_KEY_SECRET` - Secret name for API key (default: `powerfixer-warp-api-key`)
+
+## Run / session links
+
+`session_link` (polling responses) and `session_url` (agent callbacks) are produced
+upstream by Warp's API and by the agents themselves; the server never derives them from
+`WARP_API_BASE_URL`. Pointing the API base URL at an internal endpoint therefore has no
+effect on the public Oz run links surfaced to users (e.g. in Slack), so no separate
+run-link base URL is required.

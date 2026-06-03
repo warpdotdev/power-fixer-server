@@ -49,7 +49,7 @@ impl WarpApiClient {
         &self,
         request: LaunchAgentRequest,
     ) -> Result<LaunchAgentResponse, WarpApiError> {
-        let url = format!("{}/agent/run", self.base_url);
+        let url = agent_run_url(&self.base_url);
 
         log::debug!("Launching agent via {}", url);
 
@@ -77,7 +77,7 @@ impl WarpApiClient {
     ///
     /// Calls `GET /agent/tasks/{task_id}` to fetch the current task state.
     pub async fn get_task(&self, task_id: &str) -> Result<TaskResponse, WarpApiError> {
-        let url = format!("{}/agent/tasks/{}", self.base_url, task_id);
+        let url = agent_task_url(&self.base_url, task_id);
 
         log::debug!("Fetching task status: {}", task_id);
 
@@ -104,7 +104,7 @@ impl WarpApiClient {
     /// Calls `GET /agent/tasks/{task_id}` and returns detailed information
     /// including result and error_message fields.
     pub async fn get_task_detail(&self, task_id: &str) -> Result<TaskDetailResponse, WarpApiError> {
-        let url = format!("{}/agent/tasks/{}", self.base_url, task_id);
+        let url = agent_task_url(&self.base_url, task_id);
 
         log::debug!("Fetching detailed task status: {}", task_id);
 
@@ -130,6 +130,19 @@ impl WarpApiClient {
     pub fn base_url(&self) -> &str {
         &self.base_url
     }
+}
+
+/// Builds the agent-launch endpoint URL (`POST /agent/run`) for `base_url`.
+///
+/// `base_url` is used verbatim, so internal Private Service Connect endpoints such
+/// as `http://10.1.2.3/api/v1` are honored without any TLS or host assumptions.
+fn agent_run_url(base_url: &str) -> String {
+    format!("{base_url}/agent/run")
+}
+
+/// Builds the task-status endpoint URL (`GET /agent/tasks/{task_id}`) for `base_url`.
+fn agent_task_url(base_url: &str, task_id: &str) -> String {
+    format!("{base_url}/agent/tasks/{task_id}")
 }
 
 /// Gets the Warp API base URL from environment or uses the default.
@@ -168,4 +181,39 @@ pub fn get_api_key() -> Option<String> {
             Some(key)
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_endpoint_urls_for_public_https_base() {
+        let base = "https://warp.dev/api/v1";
+        assert_eq!(agent_run_url(base), "https://warp.dev/api/v1/agent/run");
+        assert_eq!(
+            agent_task_url(base, "task_123"),
+            "https://warp.dev/api/v1/agent/tasks/task_123"
+        );
+    }
+
+    #[test]
+    fn builds_endpoint_urls_for_internal_psc_http_base() {
+        // Raw IP, plain http, and a custom port must all be preserved verbatim.
+        let base = "http://10.1.2.3:8080/api/v1";
+        assert_eq!(agent_run_url(base), "http://10.1.2.3:8080/api/v1/agent/run");
+        assert_eq!(
+            agent_task_url(base, "task_123"),
+            "http://10.1.2.3:8080/api/v1/agent/tasks/task_123"
+        );
+    }
+
+    #[test]
+    fn with_config_preserves_internal_base_url() {
+        let client = WarpApiClient::with_config(
+            "test-key".to_string(),
+            "http://10.1.2.3/api/v1".to_string(),
+        );
+        assert_eq!(client.base_url(), "http://10.1.2.3/api/v1");
+    }
 }
